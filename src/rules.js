@@ -3,6 +3,7 @@
   const CORE=['vitality','intellect','energy','pride','morality','elegance','attitude','sensitivity','charm','courage','karma'];
   const additions={energy:{name:'기력',source:'vitality'},pride:{name:'자존심',source:'elegance'},attitude:{name:'성품',source:'morality'},courage:{name:'용기',source:'combat'},karma:{name:'업보',source:null},attack:{name:'공격력',source:'combat',factor:1},defense:{name:'방어력',source:'vitality',factor:1},magicPower:{name:'마력',source:'magic',factor:1},magicDefense:{name:'항마력',source:'faith',factor:1}};
   for(const [key,s] of Object.entries(additions)){C.STATS[key]={name:s.name,color:'#927150'};for(const c of Object.values(C.CHARACTERS))c.stats[key]=s.source?Math.round(c.stats[s.source]*(s.factor??.8)):0}
+  Object.assign(C.CATEGORIES,{study:'공부',work:'알바',rest:'자유행동'});
   C.STATS.combat.name='전투기술';C.STATS.magic.name='마법기술';
   const REPUTATIONS={fighter:{name:'전사 평가',stats:['combat','attack','defense']},mage:{name:'마법 평가',stats:['magic','magicPower','magicDefense']},social:{name:'사교 평가',stats:['manners','art','charm']},household:{name:'가사 평가',stats:['cooking','housework','attitude']}};
   const clamp=n=>Math.round(Math.max(0,Math.min(999,n)));

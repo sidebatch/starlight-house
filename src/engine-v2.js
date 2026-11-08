@@ -9,6 +9,8 @@
  function slots(g){return g.calendarSlots===4?4:3}
  function periodLabel(g,i){return slots(g)===4?(i+1)+'주차 (이전 일정)':PERIODS[i]}
  function blankPlan(g){return Array(slots(g)).fill(null)}
+ function monthDays(g){const d=B.date(g);return new Date(Date.UTC(d.year,d.month,0)).getUTCDate()}
+ function periodRange(g,index){const end=monthDays(g),size=slots(g)===4?7:10;return {start:index*size+1,end:index===slots(g)-1?end:(index+1)*size}}
  function log(g,title,body,tone='normal'){g.journal.unshift({month:g.elapsed,title,body,tone});g.journal=g.journal.slice(0,400)}
  function createGame(o={}){const g=B.createGame(o);return Object.assign(g,{ruleset:2,mechanicsVersion:3,reputationBonus:{fighter:0,mage:0,social:0,household:0},calendarSlots:3,activityCounts:{},exploration:A.ledger(),trophies:[],runState:null,adventure:null,festivalState:null,legacyEnding:false})}
  function updateHistory(g){g.history[g.history.length-1]=B.snapshot(g)}
@@ -46,8 +48,34 @@
  }
  function resume(g){while(g.runState.nextIndex<g.runState.plan.length){const i=g.runState.nextIndex;workPeriod(g,g.runState.plan[i],i);if(g.phase==='adventure')return g}return finish(g)}
  function advanceMonth(g,plan){return resume(startRun(g,plan))}
+ // Resolve a period once, then apply its integer changes over its actual calendar days.
+ // The existing period totals, random choices and economic balance remain unchanged.
+ function startSchedule(input,plan){const g=startRun(input,plan);g.runState.dailyMode=true;g.phase='daily';return g}
+ const bodyKeys=['condition','fatigue','stress','trust'];
+ function stepDay(input){
+  if(input.phase!=='daily'||!input.runState?.dailyMode)fail('진행 중인 하루 일정이 없습니다.');
+  const g=clone(input),r=g.runState;
+  if(r.nextIndex>=r.plan.length)return finish(g);
+  if(!r.daily){
+   const i=r.nextIndex,choice=selected(g,activities[r.plan[i]]);
+   if(choice.a.region){workPeriod(g,r.plan[i],i);r.dayFrame=null;return g}
+   const future=clone(g);workPeriod(future,r.plan[i],i);const range=periodRange(g,i);
+   r.daily={index:i,day:0,start:range.start,length:range.end-range.start+1,before:B.snapshot(g),target:B.snapshot(future),week:future.runState.weeks.at(-1),settlement:{counters:future.counters,activityCounts:future.activityCounts,reputationBonus:future.reputationBonus,toolUses:future.runState.toolUses,bonds:future.exploration.bonds}};
+   g.seed=future.seed;
+  }
+  const d=r.daily,before=B.snapshot(g);d.day++;
+  const interpolate=(a,b)=>a+Math.round((b-a)*d.day/d.length);
+  for(const k of Object.keys(C.STATS))g.stats[k]=interpolate(d.before.stats[k],d.target.stats[k]);
+  for(const k of [...bodyKeys,'gold'])g[k]=interpolate(d.before[k],d.target[k]);
+  const changes=[];
+  for(const k of [...Object.keys(C.STATS),...bodyKeys]){const stat=Object.hasOwn(C.STATS,k),from=stat?before.stats[k]:before[k],to=stat?g.stats[k]:g[k];if(from!==to)changes.push({key:k,from,to})}
+  r.dayFrame={day:d.start+d.day-1,activityId:d.week.activityId,changes,note:d.week.note};
+  if(d.day===d.length){Object.assign(g,{counters:d.settlement.counters,activityCounts:d.settlement.activityCounts,reputationBonus:d.settlement.reputationBonus});g.exploration.bonds=d.settlement.bonds;r.toolUses=d.settlement.toolUses;r.expenses+=d.week.cost;r.income+=d.week.income;r.weeks.push(d.week);r.nextIndex++;r.daily=null}
+  return g;
+ }
+ function skipDays(input){let g=input;for(let i=0;i<33&&g.phase==='daily';i++)g=stepDay(g);return g}
  function adventureAction(input,action,value){if(input.phase!=='adventure'||!input.adventure)fail('진행 중인 무사수행이 없습니다.');const g=clone(input),a=g.adventure;if(action==='move')A.move(g,Number(value));else if(action==='choice')A.choice(g,value);else if(action==='combat')A.fight(g,value);else if(action==='return'){a.finished=true;a.result='returned';a.battle=null;a.encounter=null}else if(action==='continue'){
-   if(!a.finished)fail('먼저 귀환해 주세요.');const w=g.runState.weeks.at(-1);w.note+=(w.note?' ':'')+A.REGIONS[a.region].name+'에서 '+(a.result==='rescued'?'구조되어':'무사히')+' 귀환했습니다.';g.adventure=null;g.phase='running';return resume(g);
+   if(!a.finished)fail('먼저 귀환해 주세요.');const w=g.runState.weeks.at(-1);w.note+=(w.note?' ':'')+A.REGIONS[a.region].name+'에서 '+(a.result==='rescued'?'구조되어':'무사히')+' 귀환했습니다.';g.adventure=null;if(g.runState.dailyMode){g.phase='daily';return g}g.phase='running';return resume(g);
   }else fail('알 수 없는 무사수행 행동입니다.');return g;
  }
  function festivalInfo(g){const d=B.date(g),monthIndex=g.elapsed+(10-d.month+12)%12;return {next:monthIndex<96?{...B.date({elapsed:monthIndex}),monthIndex,monthsUntil:monthIndex-g.elapsed,pending:g.phase==='festival'}:null,contests:CONTESTS,results:g.festivalResults,fee:20,ranks:[{id:'gold',name:'우승',reward:600},{id:'silver',name:'준우승',reward:300},{id:'bronze',name:'3위',reward:120},{id:'participant',name:'참가',reward:40}]}}
@@ -72,7 +100,7 @@
  function validateGame(value){if(!value||typeof value!=='object')fail('저장 정보를 읽을 수 없습니다.');const v=clone(value),phase=v.phase;if(phase==='running')fail('완료되지 않은 일정 상태입니다.');if(!v||typeof v!=='object')fail('저장 정보를 읽을 수 없습니다.');
   for(const s of [v.stats,...(v.history||[]).map(h=>h.stats),v.lastReport?.before?.stats,v.lastReport?.after?.stats])migrateStats(s);
   const modernRecords=(v.festivalResults||[]).filter(r=>r.format===2);v.festivalResults=(v.festivalResults||[]).filter(r=>r.format!==2);
-  if(['adventure','festival','running'].includes(phase)){v.phase='planning';if(v.pendingEvent)fail('진행 상태가 겹쳐 있습니다.')}
+  if(['adventure','festival','running','daily'].includes(phase)){v.phase='planning';if(v.pendingEvent)fail('진행 상태가 겹쳐 있습니다.')}
   const g=B.validateGame(v);g.ruleset=2;g.mechanicsVersion=3;g.legacyEnding=value.legacyEnding===true||(value.mechanicsVersion!==3&&phase==='ending');g.calendarSlots=value.calendarSlots===4?4:3;g.phase=phase;
   g.reputationBonus={};for(const key of Object.keys(R.REPUTATIONS))g.reputationBonus[key]=int(value.reputationBonus?.[key]??0,0,999,'분야별 평가');
   g.activityCounts={};if(value.activityCounts){for(const [id,n] of Object.entries(value.activityCounts)){if(!Object.hasOwn(activities,id))fail('알 수 없는 수련 기록입니다.');g.activityCounts[id]=int(n,0,384,'수련 횟수')}}else {const seen=new Set();for(const entry of g.journal){if(!/^\d+년 \d+월의 기록$/.test(entry.title)||seen.has(entry.month))continue;seen.add(entry.month);for(const name of entry.body.split('. 활동')[0].split(' → ')){const a=C.ACTIVITIES.find(a=>a.name===name.trim())||(name.trim()==='숲길 탐험'?activities.explore:null);if(a)g.activityCounts[a.id]=(g.activityCounts[a.id]||0)+1}}if(!seen.size&&g.lastReport)for(const w of g.lastReport.weeks)g.activityCounts[w.activityId]=(g.activityCounts[w.activityId]||0)+1}
@@ -85,16 +113,34 @@
   g.runState=value.runState?clone(value.runState):null;g.adventure=value.adventure?clone(value.adventure):null;g.festivalState=value.festivalState?clone(value.festivalState):null;
   migrateStats(g.runState?.before?.stats);
   for(const holder of [g.adventure,g.festivalState])if(holder?.battle&&value.mechanicsVersion!==3){const b=holder.battle,defaults=A.battle(g,b.level,b.name,b.boss);for(const key of ['combatSkill','magicSkill','magicPower','magicDefense','damageBy'])if(b[key]===undefined)b[key]=defaults[key]}
-  if(['adventure','festival','running'].includes(phase)){
+  if(['adventure','festival','running','daily'].includes(phase)){
    const r=g.runState;if(!r||!Array.isArray(r.plan)||![3,4].includes(r.plan.length)||r.plan.some(id=>!Object.hasOwn(activities,id))||!['schedule','festival'].includes(r.mode))fail('진행 중인 일정을 읽을 수 없습니다.');int(r.nextIndex,0,r.plan.length,'일정 위치');if(!Array.isArray(r.weeks)||r.weeks.length!==r.nextIndex||r.before.month!==g.elapsed||r.date.year!==B.date(g).year||r.date.month!==B.date(g).month)fail('일정 날짜가 맞지 않습니다.');for(const n of ['expenses','income'])int(r[n],0,100000,'진행 비용');int(r.toolUses,0,2,'도구 횟수');
+   validateDaily(g);
    if(phase==='adventure'){const a=g.adventure;if(!a||!Object.hasOwn(A.REGIONS,a.region)||activities[r.plan[r.nextIndex-1]].region!==a.region||g.festivalState)fail('무사수행 지역을 확인해 주세요.');int(a.position,0,24,'위치');int(a.days,0,10,'남은 날짜');validateCombatHolder(a);if(![null,'npc','shrine'].includes(a.encounter)||typeof a.finished!=='boolean'||![null,'returned','rescued'].includes(a.result))fail('탐험 상황을 읽을 수 없습니다.');strings(a.log,()=>true,20);if(!Array.isArray(a.visited)||a.visited.some(n=>!Number.isInteger(n)||n<0||n>24))fail('방문한 길을 확인해 주세요.')}
    if(phase==='festival'){const f=g.festivalState;if(!f||B.date(g).month!==10||r.mode!=='festival'||g.adventure||!['entry','battle','round','performance','result'].includes(f.stage))fail('수확제 순서를 확인해 주세요.');int(f.round,0,3,'대회 순서');int(f.wins,0,3,'대회 승리');if(f.stage!=='entry'&&!CONTESTS.some(c=>c.id===f.contestId))fail('참가 종목이 올바르지 않습니다.');validateCombatHolder(f);if(f.stage==='result'&&(!f.result||f.result.monthIndex!==g.elapsed||!g.festivalResults.some(r=>r.monthIndex===g.elapsed)))fail('대회 결과가 누락되었습니다.')}
   }else if(g.runState||g.adventure||g.festivalState)fail('끝난 일정에 진행 정보가 남아 있습니다.');
   if(g.phase==='ending'&&!g.legacyEnding&&g.endingId!==R.resolveEnding(g))fail('완성된 이야기의 결말이 일치하지 않습니다.');return g;
  }
+ function validateDaily(g){
+  const r=g.runState,d=r.daily,f=r.dayFrame;
+  if(g.phase==='daily'&&(!r.dailyMode||r.mode!=='schedule'||g.adventure||g.festivalState))fail('하루 진행 상태가 올바르지 않습니다.');
+  if(d){
+   if(g.phase!=='daily'||d.index!==r.nextIndex||d.index>=r.plan.length)fail('하루 일정의 순서가 맞지 않습니다.');const range=periodRange(g,d.index);
+   if(d.start!==range.start||d.length!==range.end-range.start+1)fail('달력의 날짜가 맞지 않습니다.');int(d.day,1,d.length-1,'진행 일수');
+   const a=activities[d.week?.activityId];if(!a||a.region||d.week.plannedId!==r.plan[d.index]||d.week.week!==d.index+1)fail('진행 중인 활동이 맞지 않습니다.');
+   for(const snapshot of [d.before,d.target]){if(snapshot?.month!==g.elapsed)fail('하루 기록의 날짜가 맞지 않습니다.');for(const k of Object.keys(C.STATS))int(snapshot.stats?.[k],0,999,'능력');for(const k of bodyKeys)int(snapshot[k],0,100,k);int(snapshot.gold,0,999999999,'소지금')}
+   for(const k of [...Object.keys(C.STATS),...bodyKeys,'gold']){const isStat=Object.hasOwn(C.STATS,k),a=isStat?d.before.stats[k]:d.before[k],b=isStat?d.target.stats[k]:d.target[k],now=isStat?g.stats[k]:g[k];if(now!==a+Math.round((b-a)*d.day/d.length))fail('하루 변화와 현재 능력이 맞지 않습니다.')}
+   const s=d.settlement;if(!s)fail('활동 기록이 없습니다.');for(const k of ['weeksWorked','weeksStudied','explorations'])if(s.counters?.[k]!==g.counters[k]+(k==='weeksWorked'&&a.category==='work'||k==='weeksStudied'&&a.category==='study'?1:0))fail('활동 횟수가 맞지 않습니다.');
+   const counts={...g.activityCounts,[a.id]:(g.activityCounts[a.id]||0)+1};if(JSON.stringify(s.activityCounts)!==JSON.stringify(counts))fail('수련 횟수가 맞지 않습니다.');
+   for(const k of Object.keys(R.REPUTATIONS))if(s.reputationBonus?.[k]!==clamp(g.reputationBonus[k]+(R.WORK_REPUTATION[a.id]===k?2:0)))fail('평가 기록이 맞지 않습니다.');
+   const bonds={...g.exploration.bonds};if(a.id==='church'&&r.before.stats.karma>=100)bonds.atonement=1;if(JSON.stringify(s.bonds)!==JSON.stringify(bonds))fail('인연 기록이 맞지 않습니다.');
+   int(s.toolUses,r.toolUses,Math.min(2,r.toolUses+1),'도구 사용');int(d.week.cost,0,100000,'활동 비용');int(d.week.income,0,100000,'활동 수입');if(d.target.gold!==d.before.gold+d.week.income-d.week.cost)fail('활동 비용이 맞지 않습니다.');text(d.week.note,500);
+  }
+  if(f){int(f.day,1,monthDays(g),'달력 날짜');if(!activities[f.activityId]||!Array.isArray(f.changes)||f.changes.length>Object.keys(C.STATS).length+4)fail('하루 변화 기록이 올바르지 않습니다.');const seen=new Set();for(const c of f.changes){if(seen.has(c.key)||!Object.hasOwn(C.STATS,c.key)&&!bodyKeys.includes(c.key))fail('알 수 없는 변화 항목입니다.');seen.add(c.key);const stat=Object.hasOwn(C.STATS,c.key),max=stat?999:100;int(c.from,0,max,'변화 전');int(c.to,0,max,'변화 후');if(c.from===c.to||c.to!==(stat?g.stats[c.key]:g[c.key]))fail('표시할 하루 변화가 맞지 않습니다.')}text(f.note,500)}
+ }
  function validateCombatHolder(a){int(a.maxHP,0,1000,'최대 생명력');int(a.maxMP,0,1000,'최대 마력');int(a.hp,0,a.maxHP,'생명력');int(a.mp,0,a.maxMP,'마력');int(a.herbs,0,20,'약초');if(a.damageBy)for(const n of ['physical','magic'])int(a.damageBy[n],0,10000,'대회 공격 기록');if(a.battle){const b=a.battle;text(b.name,100);int(b.hp,0,b.maxHP,'상대 생명력');int(b.maxHP,1,2000,'상대 최대 생명력');int(b.attack,1,1000,'공격력');int(b.defense,0,1000,'방어력');for(const k of ['combatSkill','magicSkill','magicPower','magicDefense'])int(b[k],0,1000,'상대 전투 능력');for(const k of ['physical','magic'])int(b.damageBy?.[k],0,2000,'공격 기록');int(b.turn,0,60,'전투 턴');int(b.level,1,10,'상대 단계');strings(b.log,()=>true,20)}}
  function serialize(g){return JSON.stringify({format:'starlight-life',version:1,savedAt:new Date().toISOString(),game:validateGame(g)},null,2)}
  function deserialize(raw){if(typeof raw!=='string'||raw.length>2000000)fail('저장 파일이 너무 큽니다.');let d;try{d=JSON.parse(raw)}catch{fail('JSON 저장 파일을 읽을 수 없습니다.')}if(d.format!=='starlight-life'||d.version!==1)fail('이 게임의 저장 파일이 아닙니다.');return validateGame(d.game)}
  function care(g,kind){const next=B.care(g,kind);next.game.stats.attitude=clamp(next.game.stats.attitude+2);updateHistory(next.game);return next}
- return {...B,activities,endings,CORE_STATS:R.CORE,REPUTATIONS:R.REPUTATIONS,reputation:R.reputation,CONTESTS,TROPHIES,PRIZES,PERIODS,slots,periodLabel,blankPlan,createGame,forecast,advanceMonth,adventureAction,festivalStart,festivalAction,festivalInfo,resolveEvent,recommend,care,validateGame,serialize,deserialize,possibilities:()=>[],setDream:()=>fail('결말은 살아온 과정 속에서 정해집니다.')};
+ return {...B,activities,endings,CORE_STATS:R.CORE,REPUTATIONS:R.REPUTATIONS,reputation:R.reputation,CONTESTS,TROPHIES,PRIZES,PERIODS,slots,periodLabel,blankPlan,monthDays,periodRange,startSchedule,stepDay,skipDays,createGame,forecast,advanceMonth,adventureAction,festivalStart,festivalAction,festivalInfo,resolveEvent,recommend,care,validateGame,serialize,deserialize,possibilities:()=>[],setDream:()=>fail('결말은 살아온 과정 속에서 정해집니다.')};
 });
