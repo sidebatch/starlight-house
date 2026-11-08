@@ -1,10 +1,10 @@
 'use strict';
-const BUILD = '0.5.1-2850393c4ff8';
+const BUILD = '0.6.0-c61c9551b170';
 const PREFIX='starlight-house-'+encodeURIComponent(new URL(self.registration.scope).pathname)+'-',SHELL=PREFIX+'shell-'+BUILD,MEDIA=PREFIX+'media-'+BUILD;
 const FILES=[
   './index.html','./manifest.webmanifest',
-  './src/styles.css','./src/pwa.css','./src/pwa.js','./src/content.js','./src/stories.js','./src/festival.js','./src/shop.js','./src/engine.js','./src/app.js',
-  './assets/manifest.js','./assets/icons/icon.svg','./assets/icons/icon-192.png','./assets/icons/icon-512.png','./assets/icons/icon-maskable-512.png','./assets/icons/apple-touch-icon.png'
+  './src/styles.css','./src/pwa.css','./src/pwa.js','./src/content.js','./src/stories.js','./src/festival.js','./src/shop.js','./src/engine.js','./src/appearance.js','./src/app.js',
+  './assets/manifest.js','./assets/media-files.json','./assets/icons/icon.svg','./assets/icons/icon-192.png','./assets/icons/icon-512.png','./assets/icons/icon-maskable-512.png','./assets/icons/apple-touch-icon.png'
 ];
 const absolute=path=>new URL(path,self.registration.scope).href;
 const core=new Set(FILES.map(absolute));
@@ -12,13 +12,17 @@ self.addEventListener('install',event=>{
   event.waitUntil((async()=>{
     const cache=await caches.open(SHELL);
     try{
-      await Promise.all(FILES.map(async file=>{
+      const catalogResponse=await fetch(absolute('./assets/media-files.json'),{cache:'reload',credentials:'same-origin'});
+      if(!catalogResponse.ok||catalogResponse.redirected)throw new Error('Missing game artwork catalog');
+      const catalog=await catalogResponse.json();if(!Array.isArray(catalog.files)||catalog.files.some(file=>!/^assets\/(?:characters\/(?:ciel|valeria)\/1[0-7]-(?:base|summer|winter|adventurer|church|dress|gown)|rooms\/(?:artist|knight|merchant|monk|noble|wanderer))\.webp$/.test(file)))throw new Error('Invalid artwork catalog');
+      const downloads=[...FILES,...catalog.files.map(file=>'./'+file)];let cursor=0;
+      await Promise.all(Array.from({length:4},async()=>{while(cursor<downloads.length){const file=downloads[cursor++];
         const request=new Request(absolute(file),{cache:'reload',credentials:'same-origin'}),response=await fetch(request);
         if(!response.ok||response.redirected)throw new Error('Incomplete app download');
         const type=response.headers.get('content-type')||'';
-        if((file.endsWith('.js')&&!/(?:java|ecma)script/i.test(type))||(file.endsWith('.css')&&!/text\/css/i.test(type))||(file.endsWith('.png')&&!/image\/png/i.test(type)))throw new Error('Unexpected app response');
+        if((file.endsWith('.js')&&!/(?:java|ecma)script/i.test(type))||(file.endsWith('.css')&&!/text\/css/i.test(type))||(file.endsWith('.png')&&!/image\/png/i.test(type))||(file.endsWith('.webp')&&!/image\/webp/i.test(type)))throw new Error('Unexpected app response');
         await cache.put(request,response);
-      }));
+      }}));
     }catch(error){await caches.delete(SHELL);throw error}
     // A replacement waits until the player chooses to save and update.
   })());
@@ -43,7 +47,7 @@ self.addEventListener('fetch',event=>{
   }
   if(request.destination==='image'&&url.pathname.startsWith(scope.pathname+'assets/')){
     event.respondWith((async()=>{
-      const cache=await caches.open(MEDIA),saved=await cache.match(request);if(saved)return saved;
+      const shell=await caches.open(SHELL),cache=await caches.open(MEDIA),saved=await shell.match(request,{ignoreSearch:true})||await cache.match(request);if(saved)return saved;
       const response=await fetch(request);if(response.ok&&!response.redirected&&response.type!=='opaque'){
         await cache.put(request,response.clone());const keys=await cache.keys();if(keys.length>120)await cache.delete(keys[0]);
       }return response;
