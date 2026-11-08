@@ -4,8 +4,15 @@
     vitality:{name:'체력',color:'#9b7851'},intellect:{name:'지력',color:'#647e96'},
     elegance:{name:'기품',color:'#99809d'},charm:{name:'매력',color:'#bd877e'},
     art:{name:'예술',color:'#b49b57'},combat:{name:'무술',color:'#728e85'},
-    housework:{name:'생활력',color:'#929061'},sensitivity:{name:'감수성',color:'#82a4a2'}
+    housework:{name:'생활력',color:'#929061'},sensitivity:{name:'감수성',color:'#82a4a2'},
+    strength:{name:'근력',color:'#a87956'},morality:{name:'도덕심',color:'#708d68'},
+    faith:{name:'신앙',color:'#b49b57'},manners:{name:'예법',color:'#99809d'},
+    magic:{name:'마법',color:'#7878b0'},cooking:{name:'요리',color:'#bd877e'},
+    dexterity:{name:'손재주',color:'#929061'}
   };
+  const LEGACY_STATS=['vitality','intellect','elegance','charm','art','combat','housework','sensitivity'];
+  // Old saves inherit related experience; future growth is independent and stored.
+  const INHERIT_STATS={strength:'vitality',morality:'sensitivity',faith:'sensitivity',manners:'elegance',magic:'intellect',cooking:'housework',dexterity:'art'};
   const CHARACTERS={
     ciel:{name:'시엘',initial:'C',tag:'세상을 천천히 들여다보는 아이',description:'작은 풍경과 이야기에서 영감을 얻습니다. 학문과 그림을 배울 때 조금 더 빠르게 성장합니다.',preferences:['reading','painting'],dream:'artist',stats:{vitality:34,intellect:48,elegance:37,charm:35,art:42,combat:18,housework:30,sensitivity:52}},
     valeria:{name:'발레리아',initial:'V',tag:'새로운 길을 먼저 발견하는 아이',description:'몸을 움직이고 낯선 곳을 탐험하는 것을 좋아합니다. 운동과 검술을 배울 때 조금 더 빠르게 성장합니다.',preferences:['athletics','sword'],dream:'knight',stats:{vitality:50,intellect:32,elegance:24,charm:44,art:28,combat:47,housework:36,sensitivity:35}}
@@ -35,7 +42,15 @@
     {id:'trip',name:'함께 떠나는 소풍',category:'rest',mark:'遊',description:'잠시 일상을 벗어나 함께 추억을 만들어요.',cost:60,gains:{sensitivity:7},fatigue:-30,stress:-44,condition:12,trust:4},
     {id:'explore',name:'숲길 탐험',category:'adventure',mark:'森',description:'낯선 길을 살피며 작은 발견을 모아요.',cost:25,gains:{combat:6,vitality:4,sensitivity:3},fatigue:22,stress:-5,minAge:12,requires:{vitality:50,combat:40}}
   ];
-  const CATEGORIES={study:'배움',work:'일손 돕기',rest:'휴식',adventure:'탐험'};
+  const additionalGains={reading:{magic:2,morality:1},painting:{dexterity:5},sword:{strength:5,morality:1},etiquette:{manners:9,morality:2},athletics:{strength:8},nature:{faith:2},chores:{cooking:4,morality:3},farm:{strength:5,dexterity:2},library:{morality:3,magic:2},workshop:{dexterity:8,strength:3},salon:{manners:6,cooking:2},stroll:{manners:1},trip:{faith:2},explore:{strength:3,dexterity:3}};
+  for(const activity of ACTIVITIES)Object.assign(activity.gains,additionalGains[activity.id]||{});
+  for(const character of Object.values(CHARACTERS))for(const [key,source] of Object.entries(INHERIT_STATS))character.stats[key]=Math.round(character.stats[source]*.6);
+  ACTIVITIES.push(
+    {id:'magic',name:'마법 수업',category:'study',mark:'魔',description:'마력을 느끼고 간단한 주문부터 익힙니다.',cost:65,gains:{magic:11,intellect:3},fatigue:14,stress:6},
+    {id:'cooking',name:'요리 수업',category:'study',mark:'食',description:'식재료를 다루고 정성스러운 한 끼를 만듭니다.',cost:40,gains:{cooking:10,dexterity:4,housework:3},fatigue:10,stress:-2},
+    {id:'church',name:'성당 봉사',category:'work',mark:'祈',description:'이웃을 돌보며 신앙과 책임감을 기릅니다.',income:24,gains:{faith:8,morality:7,sensitivity:2},fatigue:10,stress:-6}
+  );
+  const CATEGORIES={study:'교육',work:'아르바이트',rest:'휴식',adventure:'무사수행'};
   const EVENTS=[
     {id:'birthday',title:'생일의 아침',body:'아침 햇살 아래 작은 생일상이 놓였습니다. {name}는 올해 하고 싶은 일이 많다며 웃습니다.',scheduled:true,choices:[{id:'letter',label:'마음을 담은 편지를 건넨다',detail:'친밀도 +10 · 스트레스 -8',trust:10,stress:-8,gold:40,stats:{sensitivity:5}},{id:'gift',label:'취향에 맞는 선물을 준비한다',detail:'30G · 매력 +8 · 친밀도 +14',cost:30,trust:14,stress:-12,stats:{charm:8}}]},
     {id:'growing',title:'조금 더 넓어진 세상',body:'어느새 {name}가 혼자 해 보고 싶은 일을 이야기합니다. 성장의 문턱에서 어떤 응원을 건네면 좋을까요?',scheduled:true,choices:[{id:'support',label:'스스로 선택해 보라고 응원한다',detail:'감수성 +12 · 친밀도 +8',stats:{sensitivity:12},trust:8},{id:'practice',label:'새로운 일을 함께 연습한다',detail:'생활력 +12 · 지력 +6',stats:{housework:12,intellect:6},trust:4}]},
@@ -62,8 +77,8 @@
     {id:'diplomat',title:'궁정의 외교관',short:'다른 마음 사이에 놓인 다리',description:'품위 있는 태도와 따뜻한 대화가 서로 다른 사람들을 연결합니다.',letter:'말을 잘하는 사람보다, 서로를 이해하게 만드는 사람이 되고 싶어요. 제 이야기를 끝까지 들어 주셨던 것처럼요.',focus:['etiquette','stroll','reading'],requirements:[s('elegance',360),s('charm',300),s('intellect',180)]},
     {id:'healer',title:'마을의 돌봄 선생님',short:'작은 변화를 먼저 알아보는 마음',description:'섬세한 관찰과 배움으로 이웃을 돌보는 길을 선택했습니다.',letter:'누군가가 조금 나아지는 순간을 보면 마음이 놓여요. 제가 지칠 때 알아봐 주셨던 마음을 이제 이웃에게 전하려고 해요.',focus:['nature','reading','chores'],requirements:[s('sensitivity',380),s('intellect',230),v('trust',65)]},
     {id:'traveler',title:'세계를 기록하는 여행가',short:'두려움 너머에서 만난 풍경',description:'튼튼한 몸과 호기심으로 길을 나섰습니다. 돌아올 집이 있어 더 멀리 갈 수 있습니다.',letter:'지도에 없는 이야기를 많이 모아 올게요. 먼 길에서도 밥은 잘 챙겨 먹을 테니 걱정 마세요. 다음 계절에는 어떤 풍경을 만나게 될까요?',focus:['athletics','sword','nature'],requirements:[s('vitality',280),s('combat',220),s('sensitivity',220),{type:'counter',key:'explorations',min:16}]},
-    {id:'balanced',title:'사랑이 머무는 일상',short:'자신의 속도로 단단해진 삶',description:'여러 경험을 고르게 쌓으며 자신에게 맞는 삶의 속도를 찾았습니다.',letter:'특별한 이름으로 불리지 않아도 괜찮아요. 좋아하는 것을 알고, 쉬어 갈 줄 알고, 함께 웃을 사람이 있으니까요. 제 하루가 마음에 들어요.',focus:['reading','painting','athletics'],requirements:[...Object.keys(STATS).map(key=>s(key,80)),v('trust',80),v('condition',60)]},
+    {id:'balanced',title:'사랑이 머무는 일상',short:'자신의 속도로 단단해진 삶',description:'여러 경험을 고르게 쌓으며 자신에게 맞는 삶의 속도를 찾았습니다.',letter:'특별한 이름으로 불리지 않아도 괜찮아요. 좋아하는 것을 알고, 쉬어 갈 줄 알고, 함께 웃을 사람이 있으니까요. 제 하루가 마음에 들어요.',focus:['reading','painting','athletics'],requirements:[...LEGACY_STATS.map(key=>s(key,80)),v('trust',80),v('condition',60)]},
     {id:'ownPath',title:'아직 쓰이지 않은 이야기',short:'앞으로의 계절은 나의 손으로',description:'한 가지 이름으로 정리되지 않는 가능성을 안고, 새로운 하루를 시작합니다.',letter:'아직 모르는 것이 많지만, 앞으로 좋아하는 일을 더 찾아보고 싶어요. 제 이야기는 이제부터라고 생각해요. 언제나 응원해 주실 거죠?',focus:[],requirements:[],fallback:true}
   ];
-  return {STATS,CHARACTERS,ORIGINS,ACTIVITIES,CATEGORIES,EVENTS,ENDINGS};
+  return {STATS,LEGACY_STATS,INHERIT_STATS,CHARACTERS,ORIGINS,ACTIVITIES,CATEGORIES,EVENTS,ENDINGS};
 });

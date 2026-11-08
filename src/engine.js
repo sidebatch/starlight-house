@@ -298,7 +298,7 @@
   function mood(game){if(game.condition<35)return '충분한 휴식이 필요해요';if(game.stress>70)return '마음에 여유가 필요해요';if(game.fatigue>65)return '조금 지친 하루예요';if(game.trust>80)return '함께하는 시간이 편안해요';return '새로운 하루가 기대돼요'}
   function integer(value,min,max,label){if(!Number.isInteger(value)||value<min||value>max)fail(`저장 파일의 ${label} 값이 올바르지 않습니다.`);return value}
   function text(value,max,label){if(typeof value!=='string'||value.length>max)fail(`저장 파일의 ${label} 내용을 확인해 주세요.`);return value}
-  function readStats(value){if(!value||typeof value!=='object'||Array.isArray(value))fail('능력치 정보가 올바르지 않습니다.');return Object.fromEntries(KEYS.map(k=>[k,integer(value[k],0,999,C.STATS[k].name)]))}
+  function readStats(value){if(!value||typeof value!=='object'||Array.isArray(value))fail('능력치 정보가 올바르지 않습니다.');return Object.fromEntries(KEYS.map(k=>[k,integer(value[k]===undefined&&C.INHERIT_STATS[k]?Math.round(value[C.INHERIT_STATS[k]]*.6):value[k],0,999,C.STATS[k].name)]))}
   function readSnapshot(s){if(!s||typeof s!=='object')fail('성장 기록을 읽을 수 없습니다.');return {month:integer(s.month,0,96,'기록 시점'),stats:readStats(s.stats),gold:integer(s.gold,0,999999999,'소지금'),...Object.fromEntries(['condition','fatigue','stress','trust'].map(k=>[k,integer(s[k],0,100,k)]))}}
   function readFestivalResult(row,game){
     if(!row||typeof row!=='object')fail('가을제 기록을 읽을 수 없습니다.');
