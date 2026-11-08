@@ -1,8 +1,14 @@
 (function(root,factory){const api=factory(typeof module==='object'?require('./content.js'):root.MakerContent);if(typeof module==='object')module.exports=api;else root.MakerRules=api})(globalThis,function(C){
   'use strict';
   const CORE=['vitality','intellect','energy','pride','morality','elegance','attitude','sensitivity','charm','courage','karma'];
-  const additions={energy:{name:'기력',source:'vitality'},pride:{name:'자존심',source:'elegance'},attitude:{name:'성품',source:'morality'},courage:{name:'용기',source:'combat'},karma:{name:'업보',source:null}};
-  for(const [key,s] of Object.entries(additions)){C.STATS[key]={name:s.name,color:'#927150'};for(const c of Object.values(C.CHARACTERS))c.stats[key]=s.source?Math.round(c.stats[s.source]*.8):0}
+  const additions={energy:{name:'기력',source:'vitality'},pride:{name:'자존심',source:'elegance'},attitude:{name:'성품',source:'morality'},courage:{name:'용기',source:'combat'},karma:{name:'업보',source:null},attack:{name:'공격력',source:'combat',factor:1},defense:{name:'방어력',source:'vitality',factor:1},magicPower:{name:'마력',source:'magic',factor:1},magicDefense:{name:'항마력',source:'faith',factor:1}};
+  for(const [key,s] of Object.entries(additions)){C.STATS[key]={name:s.name,color:'#927150'};for(const c of Object.values(C.CHARACTERS))c.stats[key]=s.source?Math.round(c.stats[s.source]*(s.factor??.8)):0}
+  C.STATS.combat.name='전투기술';C.STATS.magic.name='마법기술';
+  const REPUTATIONS={fighter:{name:'전사 평가',stats:['combat','attack','defense']},mage:{name:'마법 평가',stats:['magic','magicPower','magicDefense']},social:{name:'사교 평가',stats:['manners','art','charm']},household:{name:'가사 평가',stats:['cooking','housework','attitude']}};
+  const clamp=n=>Math.round(Math.max(0,Math.min(999,n)));
+  function reputation(g){return Object.fromEntries(Object.entries(REPUTATIONS).map(([key,r])=>[key,clamp(r.stats.reduce((sum,k)=>sum+g.stats[k],0)/3+(g.reputationBonus?.[key]||0))]))}
+  function award(g,key,amount){g.reputationBonus??={fighter:0,mage:0,social:0,household:0};g.reputationBonus[key]=clamp((g.reputationBonus[key]||0)+amount)}
+  const WORK_REPUTATION={guard:'fighter',salon:'social',market:'social',chores:'household',inn:'household',farm:'household'};
   C.STATS.morality.name='도덕성';C.STATS.sensitivity.name='센스';
   const more={reading:{pride:2,energy:-1},painting:{pride:2,attitude:1},sword:{courage:5,energy:3},etiquette:{attitude:5,pride:3},athletics:{energy:6,courage:3},nature:{attitude:3,energy:2},chores:{attitude:5,pride:-1},farm:{energy:5,pride:-2},library:{attitude:3},workshop:{courage:3,energy:3},salon:{attitude:4,pride:1},church:{attitude:4,karma:-5},magic:{pride:3,energy:2},cooking:{attitude:3},explore:{courage:5,energy:3},trip:{attitude:2},stroll:{attitude:1}};
   for(const a of C.ACTIVITIES)Object.assign(a.gains,more[a.id]||{});
@@ -18,6 +24,8 @@
     {id:'courier',name:'비밀 운송',category:'work',mark:'影',income:100,gains:{courage:6,dexterity:4,karma:12,morality:-5,attitude:-3},fatigue:21,stress:9,minAge:15,description:'내용을 묻지 않는 수상한 의뢰. 많은 보수에는 책임이 따릅니다.'},
     ...[['ruins','남쪽 폐허',12,60],['desert','서쪽 사막',14,100],['mountain','북쪽 설산',16,160]].map(([region,name,minAge,vit])=>({id:'explore_'+region,name:name+' 무사수행',category:'adventure',mark:'旅',cost:35,gains:{combat:6,vitality:4,courage:6,energy:3},fatigue:18,stress:0,minAge,requires:{vitality:vit},region,description:name+'의 길을 직접 탐색합니다.'}))
   );
+  const combatGrowth={sword:{attack:8,defense:2},athletics:{defense:4},strategy:{attack:3,defense:6},magic:{magicPower:8,magicDefense:3},church:{magicDefense:5},guard:{attack:4,defense:5},explore:{attack:2,defense:2},explore_ruins:{attack:2,magicDefense:3},explore_desert:{attack:3,defense:3},explore_mountain:{defense:3,magicDefense:4}};
+  for(const a of C.ACTIVITIES)Object.assign(a.gains,combatGrowth[a.id]||{});
   const rows=[];
   function add(id,title,group,stats,letter,extra={}){rows.push({id,title,group,stats,short:letter.split('.')[0],description:letter,letter,focus:[],requirements:[],...extra})}
   // These conditions are only evaluated at adulthood; none are sent to the game UI as hints.
@@ -56,9 +64,11 @@
     ['atonement','새 삶을 택한 순례자',{morality:250,faith:200},'예전의 선택을 없던 일로 만들 수는 없어요. 다만 오늘의 행동은 다시 고를 수 있다는 것을 배웠습니다.',{flag:'atonement',maxKarma:70}]
   ];
   for(const r of special)add(r[0],r[1],'special',r[2],r[3],r[4]);
+  const careerReputation={sword:'fighter',strategy:'fighter',magic:'mage',painting:'social',music:'social',dance:'social',etiquette:'social',cooking:'household',workshop:'household'};
+  for(const e of rows)if(e.tier>=2&&careerReputation[e.group])e.reputation={key:careerReputation[e.group],min:e.tier===3?260:130};
   C.EXTRA_ENDINGS=rows;
   const count=(g,id)=>g.activityCounts?.[id]||0;
-  function matches(g,e){const x=g.exploration||{};return Object.entries(e.stats).every(([k,v])=>g.stats[k]>=v)&&(!e.gold||g.gold>=e.gold)&&(!e.maxMorality||g.stats.morality<=e.maxMorality)&&(e.maxKarma===undefined||g.stats.karma<=e.maxKarma)&&(!e.flag||(x.bonds?.[e.flag]||0)>=(e.minBond||1))&&(!e.cleared||x.cleared?.includes(e.cleared))&&(!e.visits||(x.visits||0)>=e.visits)&&(!e.wins||g.festivalResults.filter(r=>r.contestId==='martial'&&r.rank==='gold').length>=e.wins)}
+  function matches(g,e){const x=g.exploration||{};return Object.entries(e.stats).every(([k,v])=>g.stats[k]>=v)&&(!e.reputation||reputation(g)[e.reputation.key]>=e.reputation.min)&&(!e.gold||g.gold>=e.gold)&&(!e.maxMorality||g.stats.morality<=e.maxMorality)&&(e.maxKarma===undefined||g.stats.karma<=e.maxKarma)&&(!e.flag||(x.bonds?.[e.flag]||0)>=(e.minBond||1))&&(!e.cleared||x.cleared?.includes(e.cleared))&&(!e.visits||(x.visits||0)>=e.visits)&&(!e.wins||g.festivalResults.filter(r=>r.contestId==='martial'&&r.rank==='gold').length>=e.wins)}
   function resolveEnding(g){const special=rows.filter(e=>e.group==='special'&&matches(g,e));if(special.length)return special[0].id;const candidates=rows.filter(e=>e.group!=='special'&&!e.fallback&&matches(g,e)&&count(g,e.group)>=8);candidates.sort((a,b)=>count(g,b.group)-count(g,a.group)||(b.tier||1)-(a.tier||1));return candidates[0]?.id||'wanderer'}
-  return {CORE,additions,endings:rows,resolveEnding,branches:branches.map(b=>b[0])};
+  return {CORE,additions,REPUTATIONS,WORK_REPUTATION,reputation,award,endings:rows,resolveEnding,branches:branches.map(b=>b[0])};
 });

@@ -1,5 +1,5 @@
 'use strict';
-const BUILD = '0.8.0-e93222e878ef';
+const BUILD = '0.9.0-17d6e48137be';
 const PREFIX='starlight-house-'+encodeURIComponent(new URL(self.registration.scope).pathname)+'-',SHELL=PREFIX+'shell-'+BUILD,MEDIA=PREFIX+'media-'+BUILD;
 const FILES=[
   './index.html','./manifest.webmanifest',
