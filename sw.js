@@ -1,9 +1,9 @@
 'use strict';
-const BUILD = '0.7.0-333d9ace3bc3';
+const BUILD = '0.8.0-e93222e878ef';
 const PREFIX='starlight-house-'+encodeURIComponent(new URL(self.registration.scope).pathname)+'-',SHELL=PREFIX+'shell-'+BUILD,MEDIA=PREFIX+'media-'+BUILD;
 const FILES=[
   './index.html','./manifest.webmanifest',
-  './src/styles.css','./src/pwa.css','./src/pwa.js','./src/content.js','./src/stories.js','./src/festival.js','./src/shop.js','./src/engine.js','./src/appearance.js','./src/app.js','./src/classic-ui.js','./src/classic.css','./assets/scenes.js',
+  './src/styles.css','./src/pwa.css','./src/pwa.js','./src/content.js','./src/stories.js','./src/festival.js','./src/shop.js','./src/engine.js','./src/rules.js','./src/adventure.js','./src/legacy-engine.js','./src/engine-v2.js','./src/gameplay-ui.js','./src/gameplay.css','./src/appearance.js','./src/app.js','./src/classic-ui.js','./src/classic.css','./assets/scenes.js',
   './assets/manifest.js','./assets/media-files.json','./assets/icons/icon.svg','./assets/icons/icon-192.png','./assets/icons/icon-512.png','./assets/icons/icon-maskable-512.png','./assets/icons/apple-touch-icon.png'
 ];
 const absolute=path=>new URL(path,self.registration.scope).href;
