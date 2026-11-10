@@ -9,7 +9,7 @@
     ...Object.entries(R.REPUTATIONS).map(([id,r])=>({key:'rep-'+id,label:r.name,max:999}))];
   const integer=(n,min,max)=>Number.isInteger(n)&&n>=min&&n<=max;
   const clone=o=>JSON.parse(JSON.stringify(o));
-  function capture(g){return {elapsed:g.elapsed,gold:g.gold,values:{...g.stats,...Object.fromEntries(Object.keys(bodies).map(k=>[k,g[k]])),...Object.fromEntries(Object.entries(E.reputation(g)).map(([k,n])=>['rep-'+k,n]))}}}
+  function capture(g){return {elapsed:g.elapsed,gold:g.gold,values:{...E.effectiveStats(g),...Object.fromEntries(Object.keys(bodies).map(k=>[k,g[k]])),...Object.fromEntries(Object.entries(E.reputation(g)).map(([k,n])=>['rep-'+k,n]))}}}
   function snapshot(s,elapsed){return {elapsed,gold:s.gold,values:{...s.stats,...Object.fromEntries(Object.keys(bodies).map(k=>[k,s[k]]))}}}
   function changes(before,after){return fields.filter(f=>Number.isFinite(before.values[f.key])&&Number.isFinite(after.values[f.key])&&before.values[f.key]!==after.values[f.key]).map(f=>({...f,value:after.values[f.key],delta:after.values[f.key]-before.values[f.key]}))}
   function seasonStart(month){return Math.max(0,Math.floor((month+1)/3)*3-1)}

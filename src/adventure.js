@@ -1,4 +1,4 @@
-(function(root,factory){const api=factory(typeof module==='object'?require('./rules.js'):root.MakerRules);if(typeof module==='object')module.exports=api;else root.MakerAdventure=api})(globalThis,function(R){
+(function(root,factory){const api=factory(typeof module==='object'?require('./rules.js'):root.MakerRules,typeof module==='object'?require('./market.js'):root.MakerMarket);if(typeof module==='object')module.exports=api;else root.MakerAdventure=api})(globalThis,function(R,Q){
  'use strict';
  const REGIONS={
   forest:{name:'동쪽의 초록 숲',minAge:10,level:1,color:'#688251',tiles:{2:'treasure',6:'enemy',8:'npc',12:'camp',14:'enemy',18:'shrine',22:'boss',24:'gate'},enemy:'숲의 들개',boss:'숲길의 도적',npc:'숲의 요정',bond:'fairy',relic:'leaf',story:'큰 나무 아래에서 요정이 다친 새를 안고 있습니다. 잠시 걸음을 멈출까요?'},
@@ -14,17 +14,17 @@
  function battle(g,level,name,boss=false){const year=Math.floor(g.elapsed/12);return {name,level,boss,hp:Math.round(30+level*22+(boss?30:0)+year*3),maxHP:Math.round(30+level*22+(boss?30:0)+year*3),attack:6+level*4+year,defense:2+level*2,combatSkill:30+level*22+year*8,magicSkill:level>=2?25+level*22+year*8:0,magicPower:level>=2?8+level*4+year:0,magicDefense:level*2,damageBy:{physical:0,magic:0},turn:0,guarding:false,result:null,log:[name+'이 앞을 가로막았습니다.']}}
  function hitChance(skill,opposing){return Math.max(.1,Math.min(.98,.75+(skill-opposing)*.0012))}
  function win(g,b){b.result='won';const key=b.damageBy.magic>b.damageBy.physical?'mage':'fighter',amount=b.boss?12:5;R.award(g,key,amount);b.log.push('승리했습니다. '+R.REPUTATIONS[key].name+' +'+amount);return 'won'}
- function combat(g,a,action){const b=a.battle;if(!b||b.result)throw Error('진행 중인 전투가 없습니다.');if(!['attack','magic','guard','herb','flee'].includes(action))throw Error('전투 행동을 골라 주세요.');
+ function combat(g,a,action){const stats=Q.effectiveStats(g),b=a.battle;if(!b||b.result)throw Error('진행 중인 전투가 없습니다.');if(!['attack','magic','guard','herb','flee'].includes(action))throw Error('전투 행동을 골라 주세요.');
   if(action==='magic'&&a.mp<5)throw Error('마력이 부족합니다.');if(action==='herb'&&a.herbs<1)throw Error('약초가 없습니다.');
-  b.turn++;const bonus=g.exploration.relics.length*2+(g.trophies?.includes('martial')?4:0);let damage=0,guard=false;
+  b.turn++;const bonus=g.exploration.relics.length*2+((g.legacyTrophies||g.trophies)?.includes('martial')?4:0);let damage=0,guard=false;
   if(action==='flee'){b.result='fled';b.log.push('무리하지 않고 물러났습니다.');return b.result}
-  if(action==='attack'){if(random(g)<hitChance(g.stats.combat,b.combatSkill)){damage=Math.max(1,Math.round((9+g.stats.attack*.12+g.stats.strength*.08+bonus)*(0.9+random(g)*.2)-b.defense*(b.guarding?1.8:1)));b.damageBy.physical+=Math.min(b.hp,damage);b.log.push('검으로 '+damage+'의 피해를 주었습니다.')}else b.log.push('상대가 검을 피했습니다. 전투기술을 더 익혀야겠어요.')}
-  if(action==='magic'){a.mp-=5;if(random(g)<hitChance(g.stats.magic,b.magicSkill)){damage=Math.max(1,Math.round((10+g.stats.magicPower*.18+g.stats.intellect*.06+bonus)*(.9+random(g)*.2)-b.magicDefense));b.damageBy.magic+=Math.min(b.hp,damage);b.log.push('마법으로 '+damage+'의 피해를 주었습니다.')}else b.log.push('마법이 빗나갔습니다. 마법기술을 더 익혀야겠어요.')}
+  if(action==='attack'){if(random(g)<hitChance(stats.combat,b.combatSkill)){damage=Math.max(1,Math.round((9+stats.attack*.12+stats.strength*.08+bonus)*(0.9+random(g)*.2)-b.defense*(b.guarding?1.8:1)));b.damageBy.physical+=Math.min(b.hp,damage);b.log.push('검으로 '+damage+'의 피해를 주었습니다.')}else b.log.push('상대가 검을 피했습니다. 전투기술을 더 익혀야겠어요.')}
+  if(action==='magic'){a.mp-=5;if(random(g)<hitChance(stats.magic,b.magicSkill)){damage=Math.max(1,Math.round((10+stats.magicPower*.18+stats.intellect*.06+bonus)*(.9+random(g)*.2)-b.magicDefense));b.damageBy.magic+=Math.min(b.hp,damage);b.log.push('마법으로 '+damage+'의 피해를 주었습니다.')}else b.log.push('마법이 빗나갔습니다. 마법기술을 더 익혀야겠어요.')}
   if(action==='guard'){guard=true;a.mp=Math.min(a.maxMP,a.mp+3);b.log.push('공격에 대비하며 마력을 가다듬습니다.')}
   if(action==='herb'){a.herbs--;const heal=Math.round(a.maxHP*.38);a.hp=Math.min(a.maxHP,a.hp+heal);b.log.push('약초로 생명력을 회복했습니다.')}
   b.hp=Math.max(0,b.hp-damage);if(b.hp===0)return win(g,b);
-  b.guarding=b.turn%4===0;const spell=b.magicPower>0&&b.turn%3===0,skill=spell?b.magicSkill:b.combatSkill,opposing=spell?g.stats.magic:g.stats.combat;
-  if(random(g)<hitChance(skill,opposing)){const power=spell?b.magicPower:b.attack*(b.turn%3===0?1.35:1),defense=spell?g.stats.magicDefense*.04:g.stats.defense*.04,enemyDamage=Math.max(1,Math.round((power-defense)*(guard?.3:1)*(.9+random(g)*.2)));a.hp=Math.max(0,a.hp-enemyDamage);b.log.push((spell?'상대의 마법! ':b.turn%3===0?'거센 공격! ':'')+enemyDamage+'의 피해를 받았습니다.')}else b.log.push(spell?'상대의 마법을 피했습니다.':'상대의 공격을 피했습니다.');
+  b.guarding=b.turn%4===0;const spell=b.magicPower>0&&b.turn%3===0,skill=spell?b.magicSkill:b.combatSkill,opposing=spell?stats.magic:stats.combat;
+  if(random(g)<hitChance(skill,opposing)){const power=spell?b.magicPower:b.attack*(b.turn%3===0?1.35:1),defense=spell?stats.magicDefense*.04:stats.defense*.04,enemyDamage=Math.max(1,Math.round((power-defense)*(guard?.3:1)*(.9+random(g)*.2)));a.hp=Math.max(0,a.hp-enemyDamage);b.log.push((spell?'상대의 마법! ':b.turn%3===0?'거센 공격! ':'')+enemyDamage+'의 피해를 받았습니다.')}else b.log.push(spell?'상대의 마법을 피했습니다.':'상대의 공격을 피했습니다.');
   if(a.hp===0||b.turn>=60){b.result='lost';b.log.push('더 싸울 수 없어 구조대의 도움을 받았습니다.');return 'lost'}
   b.log=b.log.slice(-6);return null;
  }

@@ -16,14 +16,14 @@
     home:'m2 11 10-9 10 9M5 9v13h14V9M10 22v-8h4v8'
   };
   function icon(id){return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[id]||paths.dreams}"/></svg>`}
-  function statRows(g,keys){return keys.map(key=>S.row({key,label:C.STATS[key].name,value:g.stats[key]})).join('')}
+  function statRows(g,keys){return keys.map(key=>S.row({key,label:C.STATS[key].name,value:E.effectiveStats(g)[key]})).join('')}
   function reputation(g,full=false){const scores=E.reputation(g);return '<div class="reputation-ledger">'+Object.entries(E.REPUTATIONS).map(([key,r])=>S.row({key,label:r.name.replace(' 평가',''),value:scores[key],scope:'reputation'})).join('')+'</div>'}
   function status(g,full=false){
     const panel=(title,keys,style)=>'<section class="ability-group stat-panel '+style+'"><h3>'+title+'</h3>'+statRows(g,keys)+'</section>';
     const core=panel('기본 능력',E.CORE_STATS,'core-panel');if(!full)return '<div class="status-ledger-mini">'+core+'</div>';
     const body='<section class="ability-group stat-panel body-panel"><h3>몸과 마음</h3>'+Object.entries({condition:'건강',fatigue:'피로',stress:'스트레스',trust:'친밀도'}).map(([key,label])=>S.row({key,label,value:g[key],max:100,scope:'condition'})).join('')+'</section>';
     const reputations='<section class="ability-group stat-panel reputation-panel"><h3>분야별 평가</h3>'+reputation(g,true)+'<p class="ability-note">능력과 일·전투·수확제의 실적을 함께 평가합니다.</p></section>';
-    return '<div class="status-overview"><strong>'+esc(g.childName)+' · '+E.date(g).age+'세</strong></div><div class="status-ledger status-ledger-full"><div class="status-column">'+core+'</div><div class="status-column">'+panel('전투 능력',groups['전투 능력'],'combat-panel')+reputations+'</div><div class="status-column">'+panel('생활과 교양',groups['생활과 교양'],'culture-panel')+body+'</div><details class="status-notes stat-notes"><summary>육성 기록과 능력 설명</summary><p>교육 '+g.counters.weeksStudied+'회 · 아르바이트 '+g.counters.weeksWorked+'회 · 무사수행 '+g.counters.explorations+'회</p><p>전투기술은 검의 명중·회피, 공격력은 검의 위력, 방어력은 물리 피해 감소에 쓰입니다. 마법기술은 마법의 명중·회피, 마력은 주문의 위력, 항마력은 마법 피해 감소에 쓰입니다.</p><p>평가는 관련 능력과 쌓아 온 실적을 함께 반영합니다.</p></details></div>';
+    return '<div class="status-overview"><strong>'+esc(g.childName)+' · '+E.date(g).age+'세</strong>'+(Object.values(g.shop?.equipment||{}).some(Boolean)?'<small class="equipment-note">장비 포함</small>':'')+'</div><div class="status-ledger status-ledger-full"><div class="status-column">'+core+'</div><div class="status-column">'+panel('전투 능력',groups['전투 능력'],'combat-panel')+reputations+'</div><div class="status-column">'+panel('생활과 교양',groups['생활과 교양'],'culture-panel')+body+'</div><details class="status-notes stat-notes"><summary>육성 기록과 능력 설명</summary><p>교육 '+g.counters.weeksStudied+'회 · 아르바이트 '+g.counters.weeksWorked+'회 · 무사수행 '+g.counters.explorations+'회</p><p>전투기술은 검의 명중·회피, 공격력은 검의 위력, 방어력은 물리 피해 감소에 쓰입니다. 마법기술은 마법의 명중·회피, 마력은 주문의 위력, 항마력은 마법 피해 감소에 쓰입니다.</p><p>평가는 관련 능력과 쌓아 온 실적을 함께 반영합니다.</p></details></div>';
   }
   function render({game:g,plan,view,portrait,meter,content}){
     const d=E.date(g),title={home:'집',plan:'한 달 일정',status:'능력 일람',outing:'외출',journal:'성장 일지',adventure:'무사수행','harvest-run':'수확제',daily:'하루 일정',festival:'수확제',shop:'상점 · 소지품'}[view]||'집';

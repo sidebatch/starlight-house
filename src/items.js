@@ -1,0 +1,54 @@
+(function(root,factory){const data=factory(typeof module==='object'?require('./shop.js'):root.MakerShop);if(typeof module==='object')module.exports=data;else root.MakerItems=data})(globalThis,function(P){
+ 'use strict';
+ const STORES={food:{name:'해바라기 식료품점',mark:'食'},herbs:{name:'푸른잎 약초방',mark:'葉'},books:{name:'별빛 서점',mark:'書'},craft:{name:'실과 나무 공방',mark:'巧'},arms:{name:'철과 은 무구점',mark:'劍'}};
+ const CATEGORIES={recovery:'회복품',growth:'책과 성장품',gift:'선물',tool:'학습 도구',equipment:'장비'};
+ const SLOTS={weapon:'무기',armor:'방어구',accessory:'장신구'};
+ const oldStores={herbalTea:'herbs',warmSoup:'food',honeyBread:'food',referenceBook:'books',paintBox:'craft',practiceBlade:'arms',sewingKit:'craft',pressedFlowers:'craft',trailCharm:'craft'};
+ const ITEMS=P.ITEMS.map(item=>({...item,store:oldStores[item.id]}));
+ function add(id,name,store,category,price,description,effects,extra={}){ITEMS.push({id,name,store,category,price,description,effects,mark:STORES[store]?.mark||'賞',...extra})}
+ add('appleBasket','잘 익은 사과','food','recovery',38,'상큼한 사과를 먹으며 지친 몸을 쉬게 합니다.',{fatigue:-18,condition:5});
+ add('nourishingStew','보양 스튜','food','recovery',95,'고기와 콩을 푹 끓인 든든한 한 끼입니다.',{vitality:4,condition:16,fatigue:-12});
+ add('creamCake','생크림 케이크','food','recovery',65,'달콤한 휴식이 되지만, 배불리 먹으면 잠시 몸이 무거워집니다.',{stress:-28,fatigue:5,trust:2});
+ add('bitterTonic','쓴뿌리 보약','herbs','recovery',110,'기운을 보충하는 진한 보약입니다. 쓴맛은 참아야 합니다.',{vitality:6,condition:12,fatigue:-12,stress:5});
+ add('lavenderSachet','라벤더 향주머니','herbs','recovery',55,'은은한 향이 긴장을 풀어 줍니다. 잠이 솔솔 옵니다.',{stress:-24,fatigue:4});
+ add('poetryAnthology','사계절 시집','books','growth',150,'계절의 시를 읽으며 어휘와 섬세한 감각을 익힙니다.',{intellect:6,sensitivity:10,stress:-4});
+ add('travelChronicle','먼 나라 여행기','books','growth',145,'낯선 땅을 걸은 사람의 기록이 새로운 세상을 향한 용기를 줍니다.',{courage:8,sensitivity:6});
+ add('etiquetteManual','왕국 예절서','books','growth',180,'인사와 식사 예법을 연습합니다. 격식을 외우는 일은 조금 긴장됩니다.',{manners:12,elegance:5,stress:5});
+ add('arithmeticWorkbook','상인의 계산 연습장','books','growth',160,'거스름돈과 장부 문제를 직접 풀어 봅니다. 오래 집중하면 피곤해집니다.',{intellect:13,fatigue:8});
+ add('trainingNotes','검술 수련 수첩','books','growth',190,'그림에 따라 발놀림과 방어 동작을 반복 연습합니다.',{combat:10,defense:6,fatigue:10});
+ add('meditationGuide','마음을 돌아보는 책','books','growth',175,'잘못을 돌아보고 조용히 기도하며 마음가짐을 가다듬습니다.',{faith:8,morality:6,karma:-6,stress:-6});
+ add('homeCookbook','우리 집 요리책','books','growth',165,'재료 손질부터 설거지까지, 한 끼를 직접 만들어 배웁니다.',{cooking:12,housework:5,fatigue:5});
+ add('spellPrimer','초급 주문 해설서','books','growth',210,'기초 주문의 원리를 읽고 마력을 다루는 연습을 합니다.',{magic:8,magicPower:7,stress:6});
+ add('teddyBear','손바느질 곰인형','craft','gift',110,'곁에 두고 돌볼 수 있는 포근한 친구입니다.',{attitude:8,trust:4,stress:-8});
+ add('seasonBouquet','계절 꽃다발','craft','gift',90,'꽃을 고르고 단정하게 꾸미는 즐거움을 함께 나눕니다.',{charm:6,trust:3,stress:-6});
+ add('woodenMusicBox','작은 나무 오르골','craft','gift',180,'고운 선율을 들으며 박자와 음악의 느낌을 익힙니다.',{art:5,sensitivity:6,trust:4,stress:-10});
+ add('handMirror','조각 손거울','craft','gift',135,'몸가짐을 살피고 자신을 소중히 돌보도록 건네는 선물입니다.',{elegance:5,pride:4,trust:3});
+ add('copperPan','고른 열의 구리 냄비','craft','tool',230,'열이 고르게 퍼져 불 조절을 연습하기 좋습니다.',{}, {activities:['cooking','inn'],bonus:{stat:'cooking',amount:2}});
+ add('calligraphySet','서예 붓과 벼루','craft','tool',220,'붓을 잡는 자세와 정중한 서신 쓰기를 연습하는 도구입니다.',{}, {activities:['etiquette'],bonus:{stat:'manners',amount:2}});
+ add('practiceWeights','훈련용 모래주머니','arms','tool',210,'몸에 맞는 무게로 기초 체력을 단련합니다.',{}, {activities:['athletics'],bonus:{stat:'strength',amount:2}});
+ add('practiceCrystal','주문 연습 수정','craft','tool',270,'마력이 흐르는 방향을 눈으로 살피며 연습하는 수정입니다.',{}, {activities:['magic'],bonus:{stat:'magicPower',amount:2}});
+ add('shortSword','균형 잡힌 단검','arms','equipment',140,'짧고 다루기 쉬운 기본 무기입니다.',{}, {slot:'weapon',modifiers:{attack:18}});
+ add('longSword','철제 장검','arms','equipment',280,'긴 칼날로 위력이 늘지만, 익숙하지 않으면 몸놀림이 둔해집니다.',{}, {slot:'weapon',modifiers:{attack:32,combat:-6}});
+ add('greatSword','양손 대검','arms','equipment',490,'두 손을 써야 하는 무거운 검입니다. 공격에 힘이 실리는 대신 빈틈이 커집니다.',{}, {slot:'weapon',modifiers:{attack:48,defense:-12,combat:-8}});
+ add('ashStaff','물푸레나무 지팡이','arms','equipment',330,'주문의 힘을 모아 주지만 검처럼 휘두르기에는 약합니다.',{}, {slot:'weapon',modifiers:{magicPower:30,attack:-8}});
+ add('leatherGuard','가죽 흉갑','arms','equipment',160,'움직임을 크게 방해하지 않는 가벼운 방어구입니다.',{}, {slot:'armor',modifiers:{defense:18}});
+ add('chainVest','사슬 갑옷','arms','equipment',380,'촘촘한 쇠고리가 몸을 지키지만 무게 때문에 회피가 어려워집니다.',{}, {slot:'armor',modifiers:{defense:38,combat:-10}});
+ add('wardCharm','수호석 목걸이','craft','equipment',290,'주문이 새겨진 작은 돌이 마법의 충격을 덜어 줍니다.',{}, {slot:'accessory',modifiers:{magicDefense:25}});
+ add('silverBrooch','은세공 브로치','craft','equipment',260,'단정한 은 장식이 몸가짐을 돋보이게 합니다.',{}, {slot:'accessory',modifiers:{charm:8,elegance:8}});
+ const PRIZES={martial:{gold:'laurelSword',silver:'silverGuard',bronze:'duelistNotes'},dance:{gold:'roseBrooch',silver:'silverMusicBox',bronze:'danceScore'},cooking:{gold:'starbirdEgg',silver:'rareSpices',bronze:'seasonalRecipes'},art:{gold:'masterBrush',silver:'lapisPigments',bronze:'sketchPortfolio'}};
+ function prize(id,name,category,sellPrice,description,effects,extra={}){add(id,name,null,category,null,description,effects,{mark:'賞',prize:true,sellPrice,...extra})}
+ prize('laurelSword','월계수의 검','equipment',450,'무투회 우승자에게 수여하는 균형 잡힌 의장검입니다. 실전에서도 쓸 수 있습니다.',{}, {slot:'weapon',modifiers:{attack:42,combat:8,elegance:12}});
+ prize('silverGuard','은장 호심경','equipment',220,'준우승자에게 수여하는 방어구입니다. 은장 문양이 마법 충격을 흩어 줍니다.',{}, {slot:'armor',modifiers:{defense:30,magicDefense:12,combat:-4}});
+ prize('duelistNotes','노검사의 방어 수첩','growth',90,'대회 심판이 적어 준 발놀림과 방어 훈련을 따라 해 봅니다.',{combat:12,defense:10,courage:6,fatigue:8});
+ prize('roseBrooch','왕실 장미 브로치','equipment',420,'무도회 우승자의 몸가짐을 빛내는 장신구입니다.',{}, {slot:'accessory',modifiers:{charm:22,elegance:16,manners:6}});
+ prize('silverMusicBox','은빛 무도회 오르골','gift',200,'대회에서 연주한 곡을 담았습니다. 선율을 되짚으며 음악과 춤의 감각을 익힙니다.',{art:10,sensitivity:14,trust:6,stress:-15});
+ prize('danceScore','궁정 무곡 악보집','growth',90,'무곡의 박자와 인사 동작을 함께 연습하는 악보집입니다.',{art:10,manners:6,charm:5,fatigue:4});
+ prize('starbirdEgg','별깃새의 알','growth',400,'부화가 임박한 희귀한 새의 알입니다. 돌보며 부화를 돕거나, 영양 많은 요리로 만들 수 있습니다.',{}, {choices:[{id:'hatch',label:'부화를 돕고 돌본다',effects:{sensitivity:28,attitude:12},quote:'작은 부리를 내밀었어요. 조심해서 돌봐 줄래요.'},{id:'cook',label:'영양식으로 요리한다',effects:{vitality:24,condition:20},quote:'귀한 재료로 든든한 한 끼를 만들었어요.'}]});
+ prize('rareSpices','왕국 향신료 상자','growth',180,'향과 맛을 비교하며 새 요리를 실습할 수 있는 귀한 향신료입니다.',{cooking:18,sensitivity:8,stress:-6});
+ prize('seasonalRecipes','수확의 조리 비법집','growth',85,'제철 재료를 남김없이 쓰는 조리법과 부엌 정리법을 익힙니다.',{cooking:12,housework:6,fatigue:4});
+ prize('masterBrush','명장의 그림붓','tool',430,'물감이 고르게 풀리는 정교한 붓입니다. 꾸준한 그림 공부를 돕습니다.',{}, {activities:['painting'],bonus:{stat:'art',amount:4}});
+ prize('lapisPigments','청금석 안료 상자','growth',190,'안료를 직접 섞고 그려 보며 깊은 색과 표현법을 익힙니다.',{art:18,sensitivity:8,fatigue:4});
+ prize('sketchPortfolio','화가의 소묘 자료집','growth',85,'사물의 형태와 손의 움직임을 따라 그려 보는 자료집입니다.',{art:10,dexterity:8,fatigue:4});
+ for(const item of ITEMS){item.sellPrice??=Math.floor(item.price/2);item.maxOwned=item.prize?8:['tool','equipment'].includes(item.category)?1:5;}
+ return {ITEMS,STORES,CATEGORIES,SLOTS,PRIZES,LIMITS:{recovery:2,gift:1,growth:2,toolBonus:2,stack:5}};
+});
