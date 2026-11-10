@@ -83,3 +83,10 @@
  .daily-ledger .daily-legend { gap:4px; }.daily-ledger .daily-legend b { font-size:14px; }
 }
 @media(prefers-reduced-motion:reduce) { .game-stat-row .stat-fill { animation:none!important; } }
+.result-ledger { margin:14px 0; }
+.result-choice { margin:8px 0; font-size:13px; color:#75634e; }
+.season-money { display:flex; align-items:baseline; gap:12px; padding:12px 0; border-bottom:1px solid #b9986170; }
+.season-money span { margin-left:auto; font-variant-numeric:tabular-nums; }
+.action-result { max-width:620px; margin:0 auto 16px; }
+.action-result h3 { margin:0 0 8px; font:16px var(--serif); }
+.action-result .result-ledger { margin:8px 0; }
