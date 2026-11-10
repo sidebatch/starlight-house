@@ -74,6 +74,16 @@
   return g;
  }
  function skipDays(input){let g=input;for(let i=0;i<33&&g.phase==='daily';i++)g=stepDay(g);return g}
+ // Keep every ability affected by this activity visible, including rounded-zero and capped days.
+ function dailyProgress(g){
+  if(g.phase!=='daily'||!g.runState)return null;
+  const r=g.runState,d=r.daily,f=r.dayFrame,index=d?.index??(f?Math.max(0,r.nextIndex-1):Math.min(r.nextIndex,r.plan.length-1));
+  const a=activities[d?.week.activityId||f?.activityId]||selected(g,activities[r.plan[index]]).a,range=periodRange(g,index);
+  const keys=new Set([...Object.keys(a.gains),...Object.keys(d?.week.gains||{}),...(f?.changes||[]).map(c=>c.key),'condition']);
+  for(const key of ['fatigue','stress','trust'])if(a[key])keys.add(key);
+  const rows=[...Object.keys(C.STATS),...bodyKeys].filter(key=>keys.has(key)).map(key=>{const value=Object.hasOwn(C.STATS,key)?g.stats[key]:g[key],change=f?.activityId===a.id?f.changes.find(c=>c.key===key):null;return {key,from:change?.from??value,to:value,delta:change?change.to-change.from:0}});
+  return {activityId:a.id,index,start:range.start,end:range.end,day:f?.day??(d?d.start+d.day-1:range.start-1),rows};
+ }
  function adventureAction(input,action,value){if(input.phase!=='adventure'||!input.adventure)fail('진행 중인 무사수행이 없습니다.');const g=clone(input),a=g.adventure;if(action==='move')A.move(g,Number(value));else if(action==='choice')A.choice(g,value);else if(action==='combat')A.fight(g,value);else if(action==='return'){a.finished=true;a.result='returned';a.battle=null;a.encounter=null}else if(action==='continue'){
    if(!a.finished)fail('먼저 귀환해 주세요.');const w=g.runState.weeks.at(-1);w.note+=(w.note?' ':'')+A.REGIONS[a.region].name+'에서 '+(a.result==='rescued'?'구조되어':'무사히')+' 귀환했습니다.';g.adventure=null;if(g.runState.dailyMode){g.phase='daily';return g}g.phase='running';return resume(g);
   }else fail('알 수 없는 무사수행 행동입니다.');return g;
@@ -142,5 +152,5 @@
  function serialize(g){return JSON.stringify({format:'starlight-life',version:1,savedAt:new Date().toISOString(),game:validateGame(g)},null,2)}
  function deserialize(raw){if(typeof raw!=='string'||raw.length>2000000)fail('저장 파일이 너무 큽니다.');let d;try{d=JSON.parse(raw)}catch{fail('JSON 저장 파일을 읽을 수 없습니다.')}if(d.format!=='starlight-life'||d.version!==1)fail('이 게임의 저장 파일이 아닙니다.');return validateGame(d.game)}
  function care(g,kind){const next=B.care(g,kind);next.game.stats.attitude=clamp(next.game.stats.attitude+2);updateHistory(next.game);return next}
- return {...B,activities,endings,CORE_STATS:R.CORE,REPUTATIONS:R.REPUTATIONS,reputation:R.reputation,CONTESTS,TROPHIES,PRIZES,PERIODS,slots,periodLabel,blankPlan,monthDays,periodRange,startSchedule,stepDay,skipDays,createGame,forecast,advanceMonth,adventureAction,festivalStart,festivalAction,festivalInfo,resolveEvent,recommend,care,validateGame,serialize,deserialize,possibilities:()=>[],setDream:()=>fail('결말은 살아온 과정 속에서 정해집니다.')};
+ return {...B,activities,endings,CORE_STATS:R.CORE,REPUTATIONS:R.REPUTATIONS,reputation:R.reputation,CONTESTS,TROPHIES,PRIZES,PERIODS,slots,periodLabel,blankPlan,monthDays,periodRange,startSchedule,stepDay,skipDays,dailyProgress,createGame,forecast,advanceMonth,adventureAction,festivalStart,festivalAction,festivalInfo,resolveEvent,recommend,care,validateGame,serialize,deserialize,possibilities:()=>[],setDream:()=>fail('결말은 살아온 과정 속에서 정해집니다.')};
 });
