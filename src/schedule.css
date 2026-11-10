@@ -142,3 +142,61 @@
  .activity-tab { font-size:9px; gap:3px; }.activity-tab .scene-art,.activity-tab .category-symbol { width:21px; height:24px; }
  .daily-changes,.daily-ledger:has(.daily-change:nth-child(8)) .daily-changes { column-gap:10px; }.daily-change strong { font-size:12px; }
 }
+
+/* Compact activity pictograms and an illustrated day-by-day calendar. */
+#schedule-picker .activity-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-content:start; gap:7px; }
+#schedule-picker .activity-choice { grid-template-columns:56px minmax(0,1fr); align-items:center; min-height:74px; gap:8px; padding:7px; }
+.activity-thumb { width:56px; height:56px; align-self:center; border:1px solid #cbb48c; background:#fff6e3; border-radius:2px; }
+.activity-thumb>.scene-art,.activity-tab .scene-art,.calendar-side .week-card>.scene-art,.schedule-review .scene-art { object-fit:contain; }
+.activity-copy { justify-content:center; gap:3px; }
+.activity-card-top strong { font:600 13px/1.5 var(--sans); word-break:keep-all; }
+.activity-copy>.price { font-size:10px; color:#8a6d48; }
+.activity-lock { font-size:9px; font-weight:400; }
+.activity-used { font-size:8px; }
+.calendar-day { display:grid; grid-template-columns:1fr; grid-template-rows:12px 1fr; align-items:center; justify-items:center; min-height:58px; padding:3px; }
+.calendar-day>span { justify-self:start; font-size:10px; line-height:1; }
+.calendar-activity-art { display:block; width:35px; height:35px; object-fit:contain; mix-blend-mode:multiply; }
+.calendar-day>.calendar-activity-symbol { font:24px var(--serif); }
+.compact-calendar .calendar-day { min-height:43px; padding:3px; }
+.compact-calendar .calendar-activity-art { width:25px; height:25px; }
+.compact-calendar .calendar-day>.calendar-activity-symbol { font-size:19px; }
+#plan-summary { padding:7px 0 0; }
+#plan-summary .planner-footer { justify-content:flex-end; }
+#plan-summary .planner-footer .button { min-width:140px; }
+.schedule-review .event-choice { grid-template-columns:54px 1fr; min-height:68px; }
+.schedule-review .scene-art { width:54px; height:54px; grid-row:auto; border:1px solid #cbb48c; }
+.daily-picture { background:#fff6e3; max-height:260px; border:1px solid #b99961; box-shadow:none; }
+.daily-picture>.scene-art { object-fit:contain; object-position:center; }
+@media(max-width:1100px) and (min-width:761px) { #schedule-picker .activity-list { grid-template-columns:1fr; } }
+@media(max-width:760px) {
+ .calendar-day { min-height:45px; grid-template-rows:10px 1fr; padding:2px 3px; }
+ .calendar-activity-art { width:28px; height:28px; }
+ .calendar-day>span { font-size:9px; }
+ .calendar-day>.calendar-activity-symbol { font-size:20px; }
+ #schedule-picker .activity-list { gap:5px; padding:5px; }
+ #schedule-picker .activity-choice { grid-template-columns:43px minmax(0,1fr); min-height:61px; gap:5px; padding:5px; }
+ .activity-thumb { width:43px; height:43px; }
+ .activity-card-top strong { font-size:11px; line-height:1.4; }
+ .activity-copy>.price,.activity-lock { font-size:9px; }
+ .activity-used { font-size:7px; }
+ .daily-picture { border-width:1px; }
+}
+@media(max-width:350px) {
+ #schedule-picker .activity-choice { grid-template-columns:36px minmax(0,1fr); gap:4px; }
+ .activity-thumb { width:36px; height:36px; }
+ .activity-card-top strong { font-size:10px; }
+ .calendar-activity-art { width:26px; height:26px; }
+}
+
+.activity-travel-icon { display:block; width:34px; height:34px; margin:auto; }
+.activity-thumb>.activity-travel-icon { width:80%; height:80%; margin:10%; }
+@media(max-width:760px) { .calendar-day>.activity-travel-icon { width:26px; height:26px; } }
+
+.activity-tab .activity-travel-icon { width:32px; height:32px; margin:0; }
+.calendar-side .week-card>.activity-travel-icon { width:34px; height:30px; margin:0; }
+.schedule-review .event-choice>.activity-travel-icon { width:48px; height:48px; }
+@media(max-width:760px) { .activity-tab .activity-travel-icon { width:25px; height:25px; } }
+
+#plan-periods { display:none; }
+#plan-summary { border-top:1px solid #ba9961; }
+#plan-summary .planner-footer { position:static; padding:0; background:transparent; border:0; }
